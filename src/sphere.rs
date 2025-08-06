@@ -1,17 +1,22 @@
+use std::rc::Rc;
+
 use crate::hittable::{Hit, HitParams, HitResult, Hittable};
 use crate::interval::Interval;
+use crate::material::Material;
 use crate::ray::Ray;
 use raylib::prelude::Vector3;
 
 pub struct Sphere {
     center: Vector3,
     radius: f32,
+    material: Rc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Vector3, radius: f32) -> Self {
+    pub fn new(center: Vector3, radius: f32, material: Rc<dyn Material>) -> Self {
         Self {
             center,
+            material,
             radius: radius.max(0.0),
         }
     }
@@ -62,6 +67,7 @@ impl Hittable for Sphere {
                 point,
                 t,
             },
+            Rc::downgrade(&self.material),
             ray,
         ))
     }

@@ -2,6 +2,7 @@ mod camera;
 mod color;
 mod hittable;
 mod interval;
+mod material;
 mod ray;
 mod sphere;
 
@@ -9,6 +10,7 @@ use std::{ops::Range, rc::Rc};
 
 use crate::sphere::Sphere;
 use hittable::HittableList;
+use material::{LambertianMaterial, MetalMaterial};
 use raylib::prelude::*;
 
 const IMG_WIDTH: usize = 1500;
@@ -16,6 +18,16 @@ const ASPECT_RATIO: f32 = 2.;
 
 pub fn v3(x: f32, y: f32, z: f32) -> Vector3 {
     Vector3::new(x, y, z)
+}
+
+pub fn reflect(v: Vector3, n: Vector3) -> Vector3 {
+    let b_len = v.dot(n);
+    let two_bs = n * 2.0 * b_len;
+    v - two_bs
+}
+
+pub fn v3_near_zero(v: Vector3) -> bool {
+    [v.x, v.y, v.z].map(f32::abs).iter().all(|n| *n < 1e-8)
 }
 
 pub fn v3_rnd_rng(rng: Range<f32>) -> Vector3 {
@@ -62,10 +74,41 @@ fn main() {
 
     let mut world: HittableList = vec![];
 
+    let metal: Rc<dyn material::Material> = Rc::new(MetalMaterial::new(v3(0.8, 0.8, 0.8), 0.5));
+
+    let middle_material: Rc<dyn material::Material> =
+        Rc::new(LambertianMaterial::new(v3(0.1, 0.2, 0.5)));
+
+    let floor_material: Rc<dyn material::Material> =
+        Rc::new(LambertianMaterial::new(v3(0.8, 0.8, 0.)));
+
     // First sphere
-    world.push(Rc::new(Sphere::new(v3(0., 0., -1.), 0.5)));
+    world.push(Rc::new(Sphere::new(
+        v3(0., 0., -1.2),
+        0.5,
+        Rc::clone(&middle_material),
+    )));
+
     // Second sphere
-    world.push(Rc::new(Sphere::new(v3(0., -101.0, -1.), 100.)));
+    world.push(Rc::new(Sphere::new(
+        v3(0., -101.0, -1.),
+        100.,
+        Rc::clone(&floor_material),
+    )));
+
+    // Left
+    world.push(Rc::new(Sphere::new(
+        v3(-1.0, 0., -1.0),
+        0.5,
+        Rc::clone(&metal),
+    )));
+
+    // Right
+    world.push(Rc::new(Sphere::new(
+        v3(1.0, 0., -1.0),
+        0.5,
+        Rc::clone(&metal),
+    )));
 
     while !rl.window_should_close() {
         let mut dh = rl.begin_drawing(&thread);

@@ -1,11 +1,12 @@
-use crate::{interval::Interval, ray::Ray};
+use crate::{interval::Interval, material::Material, ray::Ray};
 use raylib::prelude::Vector3;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 pub struct Hit {
     t: f32,
     point: Vector3,
     normal: Vector3,
+    material: Weak<dyn Material>,
 
     /// If we hit the face of the hit. Will be unset until
     /// [Hit::compute_normal_dir] is called
@@ -25,7 +26,7 @@ pub struct HitParams {
 }
 
 impl Hit {
-    pub fn new(params: HitParams, ray: &Ray) -> Self {
+    pub fn new(params: HitParams, material: Weak<dyn Material>, ray: &Ray) -> Self {
         let HitParams {
             t,
             point,
@@ -35,6 +36,7 @@ impl Hit {
         let mut h = Hit {
             point,
             t,
+            material,
             normal: outward_normal,
             front_face: false,
         };
@@ -71,6 +73,10 @@ impl Hit {
 
     pub fn front_face(&self) -> bool {
         self.front_face
+    }
+
+    pub fn material(&self) -> Rc<dyn Material> {
+        self.material.upgrade().unwrap()
     }
 }
 

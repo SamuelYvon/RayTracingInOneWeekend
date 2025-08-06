@@ -4,8 +4,9 @@ use crate::{
     color::{ColorV3, as_raylib_color},
     hittable::{RcHittable, hit_scan},
     interval::Interval,
+    material::ScatteredLight,
     ray::Ray,
-    v3, v3_random_unit_hemisphere,
+    v3, v3_random_unit,
 };
 
 const MAX_DEPTH_BOUNCE: usize = 50;
@@ -103,14 +104,15 @@ impl Camera {
         }
 
         if let Some(hit) = hit_scan(ray, Interval::new(0.001, f32::INFINITY), world) {
-            let point = hit.point();
-
-            let bounce_direction = v3_random_unit_hemisphere(hit.normal());
-
-            let bounce_ray = Ray::new(point, bounce_direction);
-
-            // Lose half the color
-            Camera::colorize(world, &bounce_ray, depth_tokens - 1) * 0.5
+            if let Some(ScatteredLight {
+                scattered,
+                attenuation,
+            }) = hit.material().scatter(ray, &hit)
+            {
+                Camera::colorize(world, &scattered, depth_tokens - 1) * attenuation
+            } else {
+                ColorV3::default()
+            }
         } else {
             ray.height_based_color()
         }
