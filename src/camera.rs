@@ -1,15 +1,14 @@
-use raylib::{
-    color::Color,
-    prelude::{RaylibDraw, RaylibDrawHandle, Vector3},
-};
+use raylib::prelude::{RaylibDraw, RaylibDrawHandle, Vector3};
 
 use crate::{
-    color::{ColorV3, as_raylib_color, normal_to_color},
+    color::{ColorV3, as_raylib_color},
     hittable::{RcHittable, hit_scan},
     interval::Interval,
     ray::Ray,
-    v3,
+    v3, v3_random_unit_hemisphere,
 };
+
+const MAX_DEPTH_BOUNCE: usize = 50;
 
 #[allow(unused)]
 pub struct Camera {
@@ -98,9 +97,20 @@ impl Camera {
     }
 
     /// Compute a [ColorV3] that matches the color of the sampled ray at the given position.
-    fn colorize(&self, world: &[RcHittable], ray: &Ray) -> ColorV3 {
-        if let Some(hit) = hit_scan(ray, Interval::new(0., f32::INFINITY), world) {
-            normal_to_color(hit.normal())
+    fn colorize(world: &[RcHittable], ray: &Ray, depth_tokens: usize) -> ColorV3 {
+        if depth_tokens == 0 {
+            return Vector3::default();
+        }
+
+        if let Some(hit) = hit_scan(ray, Interval::new(0.001, f32::INFINITY), world) {
+            let point = hit.point();
+
+            let bounce_direction = v3_random_unit_hemisphere(hit.normal());
+
+            let bounce_ray = Ray::new(point, bounce_direction);
+
+            // Lose half the color
+            Camera::colorize(world, &bounce_ray, depth_tokens - 1) * 0.5
         } else {
             ray.height_based_color()
         }
@@ -126,7 +136,7 @@ impl Camera {
                 // positions
                 let color: ColorV3 = (0..self.pixel_samples)
                     .map(|_| self.get_ray(x, y))
-                    .map(|ray| self.colorize(world, &ray))
+                    .map(|ray| Camera::colorize(world, &ray, MAX_DEPTH_BOUNCE))
                     .fold(Vector3::default(), |a, e| a + e)
                     * self.pixel_sample_scale;
 

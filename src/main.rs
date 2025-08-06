@@ -1,4 +1,3 @@
-#![allow(unused)]
 mod camera;
 mod color;
 mod hittable;
@@ -6,7 +5,7 @@ mod interval;
 mod ray;
 mod sphere;
 
-use std::rc::Rc;
+use std::{ops::Range, rc::Rc};
 
 use crate::sphere::Sphere;
 use hittable::HittableList;
@@ -17,6 +16,40 @@ const ASPECT_RATIO: f32 = 2.;
 
 pub fn v3(x: f32, y: f32, z: f32) -> Vector3 {
     Vector3::new(x, y, z)
+}
+
+pub fn v3_rnd_rng(rng: Range<f32>) -> Vector3 {
+    let x = rand::random_range(rng.clone());
+    let y = rand::random_range(rng.clone());
+    let z = rand::random_range(rng.clone());
+    v3(x, y, z)
+}
+
+pub fn v3_rnd() -> Vector3 {
+    v3_rnd_rng(0. ..1.)
+}
+
+pub fn v3_random_unit() -> Vector3 {
+    loop {
+        let p = v3_rnd_rng(-1. ..1.);
+        let len_squared = p.dot(p);
+        // Unsure about the actual value, but we are trying to avoid bogus vectors due to
+        // a FPE
+        if 1e-20 < len_squared && len_squared <= 1. {
+            break p / len_squared.sqrt(); // normalize
+        }
+    }
+}
+
+pub fn v3_random_unit_hemisphere(normal: Vector3) -> Vector3 {
+    let on_u_sphere = v3_random_unit();
+
+    // Aiming in the same general direction as the normal
+    if on_u_sphere.dot(normal) > 0. {
+        on_u_sphere
+    } else {
+        on_u_sphere * -1.
+    }
 }
 
 fn main() {

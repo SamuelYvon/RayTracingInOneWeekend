@@ -20,7 +20,6 @@ impl Sphere {
 impl Hittable for Sphere {
     fn hits(&self, ray: &Ray, t_range: Interval<f32>) -> HitResult {
         let oc = self.center - ray.origin();
-
         // Quadratic equation components
         let a = ray.dir().length().powf(2.0);
         let h = ray.dir().dot(oc);
@@ -34,19 +33,28 @@ impl Hittable for Sphere {
 
         // Solution to the equation of the sphere, this is the value of `t`. We compute
         // each root
-        let sqrd = discriminant.sqrt();
+        let sqrtd = discriminant.sqrt();
 
-        let mut t = (h - sqrd) / a;
+        let mut t = (h - sqrtd) / a;
 
         if !t_range.contains(t, false) {
-            t = (h + sqrd) / a;
+            t = (h + sqrtd) / a;
             if !t_range.contains(t, false) {
                 return None;
             }
         }
 
         let point = ray.eval(t);
-        let normal = (point - self.center).normalized();
+        let normal = (point - self.center) / self.radius;
+
+        #[cfg(debug_assertions)]
+        {
+            let p = (point - self.center).length();
+            assert!(
+                (p - self.radius).abs() <= 1e-3,
+                "The point is not on the sphere"
+            )
+        }
 
         Some(Hit::new(
             HitParams {
